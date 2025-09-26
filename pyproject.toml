@@ -36,6 +36,8 @@ dev = [
   "mkdocs-material>=9.5",
   "pyzmq>=26.0",
   "pydantic-settings>=2.4",
+  "textual>=0.62",
+  "rich>=13.7",
 ]
 
 [tool.black]
@@ -101,6 +103,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "zmq"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "textual.*"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

@@ -22,8 +22,19 @@ def main() -> int:
         default="",
         help="Comma-separated list of topic filters (e.g., heartbeat,roi,fps).",
     )
+    ap.add_argument("--hold", metavar="AGENT", help="Send HOLD to agent and exit.")
+    ap.add_argument("--resume", metavar="AGENT", help="Send RESUME to agent and exit.")
+    ap.add_argument("--tui", action="store_true", help="Run the Textual TUI.")
     args = ap.parse_args()
     topics = {t.strip() for t in args.topics.split(",") if t.strip()} if args.topics else set()
+
+    if args.tui:
+        # Launch the TUI app; it builds its own IPC via the loader.
+        from apps.coordinator.tui import CoordinatorTUI
+
+        app = CoordinatorTUI()
+        app.run()
+        return 0
 
     settings = load_coordinator_settings()  # uses your loader/env/profile
     cmd_port, telem_sub = build_ipc(settings)
@@ -53,6 +64,20 @@ def main() -> int:
             print(resp)
         if not args.watch:
             return 0
+
+    def _one_shot(verb: str, agent: str) -> int:
+        ep = settings.agents_cmd.get(agent)
+        if not ep:
+            print(f"[coord] unknown agent '{agent}'. Known: {sorted(settings.agents_cmd.keys())}")
+            return 2
+        resp = cmd_port.send(ep, SimpleNamespace(type=verb))
+        print(f"[coord] {verb}->{agent} @ {ep} :: {resp}")
+        return 0
+
+    if args.hold:
+        return _one_shot("HOLD", args.hold)
+    if args.resume:
+        return _one_shot("RESUME", args.resume)
 
     # Telemetry tail
     if args.watch:
