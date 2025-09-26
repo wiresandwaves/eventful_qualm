@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 import uuid
 from collections.abc import Mapping
@@ -9,6 +7,13 @@ from typing import Any, cast
 
 import zmq
 from ports.ipc import AgentCommandPort, TelemetryPubPort, TelemetrySubPort
+from shared.contracts.v1.ipc_wire import (
+    SCHEMA_V1,
+    CommandEnvelope,
+    ErrorInfo,
+    ResponseEnvelope,
+    TelemetryEnvelope,
+)
 
 # --------- Common helpers ---------
 
@@ -38,8 +43,8 @@ class ZmqAgentCommandPort(AgentCommandPort):
         self._req_cache: dict[str, zmq.Socket] = {}
 
     @classmethod
-    def bind_rep(cls, addr: str) -> ZmqAgentCommandREPServer:
-        return ZmqAgentCommandREPServer(addr)
+    def bind_rep(cls, addr: str) -> "ZmqAgentCommandREPServer":
+        return ZmqAgentCommandREPServer(addr=addr)
 
     def _get_req(self, addr: str) -> zmq.Socket:
         s = self._req_cache.get(addr)
@@ -56,27 +61,22 @@ class ZmqAgentCommandPort(AgentCommandPort):
         Retries once on timeout.
         """
         msg_id = str(uuid.uuid4())
-        payload = {
-            "schema_version": 1,
-            "msg_id": msg_id,
-            "command": {"type": getattr(cmd, "type", "UNKNOWN")},
-        }
+        env = CommandEnvelope(msg_id=msg_id, command={"type": getattr(cmd, "type", "UNKNOWN")})
+        payload = env.model_dump(mode="json")
 
         s = self._get_req(addr)
 
         for attempt in (1, 2):
             try:
                 s.send_json(payload)
-                # ruff RET504 & mypy no-any-return: cast the recv_json result
                 return cast(dict[str, Any], s.recv_json())
             except zmq.error.Again:
                 if attempt == 2:
-                    return {
-                        "ok": False,
-                        "correlates_to": msg_id,
-                        "error": {"code": "timeout", "detail": "REQ timeout"},
-                    }
-                # REQ sockets cannot just resend without recv; recreate socket cleanly.
+                    return ResponseEnvelope(
+                        ok=False,
+                        correlates_to=msg_id,
+                        error=ErrorInfo(code="timeout", detail="REQ timeout"),
+                    ).model_dump()
                 try:
                     s.close(0)
                 except Exception:
@@ -84,17 +84,17 @@ class ZmqAgentCommandPort(AgentCommandPort):
                 self._req_cache.pop(addr, None)
                 s = self._get_req(addr)
             except Exception as ex:
-                return {
-                    "ok": False,
-                    "correlates_to": msg_id,
-                    "error": {"code": "internal", "detail": repr(ex)},
-                }
+                return ResponseEnvelope(
+                    ok=False,
+                    correlates_to=msg_id,
+                    error=ErrorInfo(code="internal", detail=repr(ex)),
+                ).model_dump()
         # Should not reach.
-        return {
-            "ok": False,
-            "correlates_to": msg_id,
-            "error": {"code": "internal", "detail": "unreachable"},
-        }
+        return ResponseEnvelope(
+            ok=False,
+            correlates_to=msg_id,
+            error=ErrorInfo(code="internal", detail="unreachable"),
+        ).model_dump()
 
 
 @dataclass
@@ -124,47 +124,50 @@ class ZmqAgentCommandREPServer:
         Returns True if a message was processed, False on idle.
         """
         try:
-            if self._sock.poll(timeout=10):  # short poll for responsiveness
-                try:
-                    req = self._sock.recv_json()
-                except Exception:
-                    self._sock.send_json(
-                        {
-                            "ok": False,
-                            "correlates_to": "<unknown>",
-                            "error": {"code": "bad-json", "detail": "Invalid JSON"},
-                        }
-                    )
-                    return True
+            if not self._sock.poll(timeout=10):
+                return False
 
-                # Validate schema_version
-                if int(req.get("schema_version", 0)) != 1:
-                    self._sock.send_json(
-                        {
-                            "ok": False,
-                            "correlates_to": req.get("msg_id", "<unknown>"),
-                            "error": {"code": "api-mismatch", "detail": "schema_version != 1"},
-                        }
-                    )
-                    return True
-
-                # Extract command
-                cmd = req.get("command") or {}
-                msg_id = req.get("msg_id", "<unknown>")
-
-                try:
-                    result = handler(cmd) or {}
-                    self._sock.send_json({"ok": True, "correlates_to": msg_id, "data": result})
-                except Exception as ex:
-                    self._sock.send_json(
-                        {
-                            "ok": False,
-                            "correlates_to": msg_id,
-                            "error": {"code": "internal", "detail": repr(ex)},
-                        }
-                    )
+            # Got something; try to receive JSON
+            try:
+                req = self._sock.recv_json()
+            except Exception:
+                self._sock.send_json(
+                    {
+                        "ok": False,
+                        "correlates_to": "<unknown>",
+                        "error": {"code": "bad-json", "detail": "Invalid JSON"},
+                    }
+                )
                 return True
-            return False
+
+            # Validate schema_version
+            if int(req.get("schema_version", 0)) != SCHEMA_V1:
+                self._sock.send_json(
+                    {
+                        "ok": False,
+                        "correlates_to": req.get("msg_id", "<unknown>"),
+                        "error": {"code": "api-mismatch", "detail": "schema_version != 1"},
+                    }
+                )
+                return True
+
+            # Dispatch
+            cmd = req.get("command") or {}
+            msg_id = req.get("msg_id", "<unknown>")
+
+            try:
+                result = handler(cmd) or {}
+                self._sock.send_json({"ok": True, "correlates_to": msg_id, "data": result})
+            except Exception as ex:
+                self._sock.send_json(
+                    {
+                        "ok": False,
+                        "correlates_to": msg_id,
+                        "error": {"code": "internal", "detail": repr(ex)},
+                    }
+                )
+            return True
+
         except zmq.error.Again:
             return False
 
@@ -185,17 +188,17 @@ class ZmqTelemetryPubPort(TelemetryPubPort):
         self._pub.bind(addr)
 
     @classmethod
-    def bind_pub(cls, addr: str) -> ZmqTelemetryPubPort:
+    def bind_pub(cls, addr: str) -> "ZmqTelemetryPubPort":
         return cls(addr)
 
     def publish(self, topic: str, payload: Mapping[str, Any]) -> None:
-        try:
-            self._pub.send_multipart(
-                [topic.encode("utf-8"), json.dumps(dict(payload)).encode("utf-8")]
-            )
-        except Exception:
-            # PUB is fire-and-forget; swallow to avoid crashing the agent loop.
-            pass
+        env = TelemetryEnvelope(msg_id=str(uuid.uuid4()), topic=topic, data=dict(payload))
+        self._pub.send_multipart(
+            [
+                topic.encode("utf-8"),
+                json.dumps(env.model_dump(mode="json")).encode("utf-8"),
+            ]
+        )
 
 
 class ZmqTelemetrySubPort(TelemetrySubPort):
@@ -218,6 +221,10 @@ class ZmqTelemetrySubPort(TelemetrySubPort):
                 decoded = json.loads(data.decode("utf-8"))
             except Exception:
                 return {"topic": topic.decode("utf-8"), "error": {"code": "bad-json"}}
-            # Normalize to a simple envelope dict
-            return {"topic": topic.decode("utf-8"), "data": decoded}
+            # keep return type as dict for the port; payload is a TelemetryEnvelope dict
+            return {
+                "topic": topic.decode("utf-8"),
+                "data": decoded.get("data", {}),
+                "envelope": decoded,
+            }
         return None

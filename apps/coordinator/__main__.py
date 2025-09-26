@@ -17,7 +17,13 @@ def main() -> int:
     ap.add_argument(
         "--connect-wait-ms", type=int, default=100, help="PUB/SUB settle time before first recv."
     )
+    ap.add_argument(
+        "--topics",
+        default="",
+        help="Comma-separated list of topic filters (e.g., heartbeat,roi,fps).",
+    )
     args = ap.parse_args()
+    topics = {t.strip() for t in args.topics.split(",") if t.strip()} if args.topics else set()
 
     settings = load_coordinator_settings()  # uses your loader/env/profile
     cmd_port, telem_sub = build_ipc(settings)
@@ -52,8 +58,12 @@ def main() -> int:
     if args.watch:
         try:
             while True:
-                msg: dict | None = telem_sub.recv(timeout_ms=250)
-                if msg and not args.quiet:
+                msg = telem_sub.recv(timeout_ms=250)
+                if not msg:
+                    continue
+                if topics and msg.get("topic") not in topics:
+                    continue
+                if not args.quiet:
                     print(f"[coord] TELEM <- {msg}")
         except KeyboardInterrupt:
             if not args.quiet:

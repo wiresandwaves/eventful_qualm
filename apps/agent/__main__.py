@@ -2,28 +2,26 @@ from __future__ import annotations
 
 import argparse
 import time
-from typing import Any
 
 from shared.config.loader import load_agent_settings
 
+from apps.agent.commands import AgentCommandDispatcher
 from apps.agent.compose import build_ipc
 
 
-def _handler_factory(telem_pub):
-    """Return a simple command handler. Publishes a heartbeat on PING."""
+def _make_dispatcher(telem_pub, hb_period_s: float):
+    disp = AgentCommandDispatcher()
 
-    def handle(cmd: dict[str, Any]) -> dict[str, Any]:
-        ctype = (cmd or {}).get("type", "")
-        if ctype == "PING":
-            # minimal visibility: publish a heartbeat
-            try:
-                telem_pub.publish("heartbeat", {"ok": True})
-            except Exception:
-                pass
-            return {"pong": True}
-        return {"echo": ctype or "UNKNOWN"}
+    @disp.route("PING")
+    def _ping(_cmd: dict) -> dict:
+        try:
+            telem_pub.publish("heartbeat", {"ok": True})
+        except Exception:
+            pass
+        return {"pong": True}
 
-    return handle
+    # you can add HOLD/RESUME later
+    return disp
 
 
 def main() -> int:
@@ -35,24 +33,31 @@ def main() -> int:
     settings = load_agent_settings()  # uses your loader/env/profile
     cmd_server, telem_pub = build_ipc(settings)
 
-    if not args.quiet:
-        print(
-            f"[agent] ipc_impl={settings.ipc_impl} "
-            f"cmd_bind={getattr(settings, 'cmd_bind', '?')} "
-            f"telem_bind={getattr(settings, 'telem_bind', '?')}"
-        )
+    hb_period_s = 1.0 / max(settings.heartbeat_hz, 0.1)
+    disp = _make_dispatcher(telem_pub, hb_period_s)
 
-    handler = _handler_factory(telem_pub)
+    next_hb = time.monotonic() + hb_period_s
+    tick_s = max(args.tick_ms, 1) / 1000.0
 
     try:
         while True:
-            # Poll once for a command; if none, loop quickly
+            # drive commands
             try:
-                cmd_server.poll_once(handler)
+                cmd_server.poll_once(disp.handle)
             except Exception as ex:
                 if not args.quiet:
                     print(f"[agent] handler error: {ex!r}")
-            time.sleep(max(args.tick_ms, 1) / 1000.0)
+
+            # periodic heartbeat
+            now = time.monotonic()
+            if now >= next_hb:
+                try:
+                    telem_pub.publish("heartbeat", {"ok": True})
+                except Exception:
+                    pass
+                next_hb = now + hb_period_s
+
+            time.sleep(tick_s)
     except KeyboardInterrupt:
         if not args.quiet:
             print("\n[agent] shutting down...")
