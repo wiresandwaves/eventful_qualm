@@ -7,6 +7,7 @@ Usage:
   python tools/tree.py --max-depth 4  # limit depth
   python tools/tree.py --out repo_tree.txt
 """
+
 from __future__ import annotations
 
 import argparse
