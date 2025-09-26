@@ -3,10 +3,11 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import cast
 
+from rich.text import Text
 from shared.config.loader import load_coordinator_settings
 from textual.app import App, ComposeResult
 from textual.reactive import reactive
@@ -19,6 +20,13 @@ def _utc_now_iso() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
+# helper for safe dt age
+def _age_seconds(ts: datetime | None) -> float | None:
+    if not ts:
+        return None
+    return (datetime.now(UTC) - ts).total_seconds()
+
+
 @dataclass
 class AgentRow:
     name: str
@@ -27,6 +35,7 @@ class AgentRow:
     heartbeats: int = 0
     fps: float | None = None
     state: str = "-"
+    last_seen_ts: datetime | None = None
 
 
 class CoordinatorTUI(App):
@@ -37,6 +46,8 @@ class CoordinatorTUI(App):
         ("h", "hold", "Hold"),
         ("r", "resume", "Resume"),
         ("R", "refresh", "Refresh"),
+        ("s", "sort", "Sort"),
+        ("?", "help", "Help"),
     ]
 
     # UI state
@@ -50,6 +61,15 @@ class CoordinatorTUI(App):
         self._sub_thread: threading.Thread | None = None
         self._stop = threading.Event()
         self._table: DataTable | None = None
+        self._status: Static | None = None
+        self._last_msg_ts: datetime | None = None
+
+        # UI knobs (non-breaking defaults if not present in settings)
+        self._heartbeat_hz: float = getattr(self.settings, "heartbeat_hz", 1.0)
+        ui = getattr(self.settings, "ui", SimpleNamespace())
+        self._stale_factor: float = getattr(ui, "stale_factor", 2.0)
+        self._ttl_factor: float = getattr(ui, "ttl_factor", 3.0)
+        self._sort_mode: str = "last"  # last | agent | state
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -60,7 +80,10 @@ class CoordinatorTUI(App):
         table = DataTable(zebra_stripes=True)
         table.add_columns("Agent", "Last Seen (UTC)", "State", "Heartbeats", "FPS", "Endpoint")
         self._table = table
+        # status bar under table (dynamic)
+        self._status = Static("")
         yield table
+        yield self._status
         yield Footer()
 
     def on_mount(self) -> None:
@@ -92,7 +115,8 @@ class CoordinatorTUI(App):
         if not self._table or not self.rows:
             return None
         row_idx = self._table.cursor_row
-        keys = list(self.rows.keys())
+        # respect current visible ordering
+        keys = [r.name for r in self._sorted_rows()]
         if 0 <= row_idx < len(keys):
             return cast(AgentRow, self.rows[keys[row_idx]])
         return None
@@ -109,16 +133,32 @@ class CoordinatorTUI(App):
     def action_resume(self) -> None:
         self._send_command("RESUME")
 
+    def action_sort(self) -> None:
+        self._sort_mode = {"last": "agent", "agent": "state", "state": "last"}[self._sort_mode]
+        self.notify(f"Sort: {self._sort_mode}", severity="information")
+        self._refresh_table()
+
+    def action_help(self) -> None:
+        self.notify(
+            "Keys: q quit • p ping • h hold • r resume • R refresh • s sort • ? help\n"
+            "Sort cycles: last seen → agent → state\n"
+            "Rows turn yellow when stale; red when no telemetry yet.",
+            severity="information",
+        )
+
     def _send_command(self, ctype: str) -> None:
         ag = self._selected_agent()
         if not ag:
             self.notify("No agent selected", severity="warning")
             return
         try:
+            t0 = time.perf_counter()
             resp = self.cmd_port.send(ag.cmd_ep, SimpleNamespace(type=ctype))
-            ok = resp.get("ok")
+            dt_ms = int((time.perf_counter() - t0) * 1000)
+            ok = bool(resp.get("ok"))
+            err_code = (resp.get("error") or {}).get("code", "timeout" if not ok else "")
             self.notify(
-                f"{ctype} → {ag.name}: {'OK' if ok else 'ERR'}",
+                f"{ctype} → {ag.name}: {'✓ ' + str(dt_ms) + 'ms' if ok else '✕ ' + err_code}",
                 severity=("information" if ok else "error"),
             )
         except Exception as ex:
@@ -148,9 +188,11 @@ class CoordinatorTUI(App):
                 # fallback: update all (e.g., older agents that didn't include agent_id)
                 targets = list(self.rows.values())
 
-            now = _utc_now_iso()
+            now_iso = _utc_now_iso()
+            now_dt = datetime.now(UTC)
             for row in targets:
-                row.last_seen = now
+                row.last_seen = now_iso
+                row.last_seen_ts = now_dt
                 if topic == "heartbeat":
                     row.heartbeats += 1
                     # optional: reflect hold in state if provided
@@ -167,6 +209,7 @@ class CoordinatorTUI(App):
                     except Exception:
                         pass
 
+            self._last_msg_ts = now_dt
             self.call_from_thread(self._refresh_table)
         # end loop
 
@@ -176,12 +219,61 @@ class CoordinatorTUI(App):
         if not self._table:
             return
         self._table.clear()
-        for row in self.rows.values():
+        for row in self._sorted_rows():
+            status = self._classify(row)
+            # state cell with color + stale/down hints
+            if status == "DOWN":
+                state_cell = Text("DOWN", style="red")
+            elif status == "STALE":
+                state_cell = Text((row.state or "-") + " (STALE)", style="yellow")
+            else:
+                state_cell = Text(
+                    row.state or "-",
+                    style="green" if (row.state or "").upper() in {"RUN", "OK"} else "",
+                )
+
             self._table.add_row(
                 row.name,
                 row.last_seen,
-                row.state or "-",
+                state_cell,
                 str(row.heartbeats),
                 f"{row.fps:.1f}" if row.fps is not None else "-",
                 row.cmd_ep,
             )
+        # update status bar
+        if self._status:
+            self._status.update(self._status_text())
+
+    def _classify(self, row: AgentRow) -> str:
+        """Return OK | STALE | DOWN based on last_seen_ts."""
+        if not row.last_seen_ts:
+            return "DOWN"
+        age = _age_seconds(row.last_seen_ts) or 0.0
+        stale_threshold = self._stale_factor * (1.0 / max(self._heartbeat_hz, 0.001))
+        return "STALE" if age > stale_threshold else "OK"
+
+    def _sorted_rows(self) -> list[AgentRow]:
+        items = list(self.rows.values())
+        if self._sort_mode == "agent":
+            items.sort(key=lambda r: r.name.lower())
+        elif self._sort_mode == "state":
+            items.sort(key=lambda r: (r.state, r.name.lower()))
+        else:  # "last"
+            items.sort(key=lambda r: r.last_seen_ts or datetime.fromtimestamp(0, UTC), reverse=True)
+        return items
+
+    def _status_text(self) -> str:
+        configured = len(self.rows)
+        # "connected" = telemetry within ttl window
+        ttl_secs = self._ttl_factor * (1.0 / max(self._heartbeat_hz, 0.001))
+        now = datetime.now(UTC)
+        connected = sum(
+            1
+            for r in self.rows.values()
+            if (r.last_seen_ts and (now - r.last_seen_ts) <= timedelta(seconds=ttl_secs))
+        )
+        last_ts = self._last_msg_ts.isoformat(timespec="seconds") if self._last_msg_ts else "—"
+        return (
+            f"Agents: {connected}/{configured} • Last msg: {last_ts}"
+            + f" • Sort: {self._sort_mode} • Q quit  ? help"
+        )

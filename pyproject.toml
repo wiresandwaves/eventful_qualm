@@ -109,6 +109,10 @@ ignore_missing_imports = true
 module = "textual.*"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "rich.*"
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
