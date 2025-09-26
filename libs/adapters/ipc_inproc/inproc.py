@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from ports.ipc import AgentCommandPort, TelemetryPubPort, TelemetrySubPort
@@ -40,3 +40,16 @@ class InprocTelemetrySubPort(TelemetrySubPort):
 
     def recv(self, timeout_ms: int = 100) -> dict | None:
         return None
+
+
+class InprocCommandServerPort:
+    @classmethod
+    def create(cls) -> InprocCommandServerPort:
+        return cls()
+
+    def poll_once(self, handler: Callable[[dict], dict]) -> bool:
+        # No actual queue in the in-proc stub—just say "no work"
+        return False
+
+    def close(self) -> None:
+        pass

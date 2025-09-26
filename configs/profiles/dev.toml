@@ -1,12 +1,12 @@
 [agent]
 agent_id = "vm1"
 heartbeat_hz = 5.0
-ipc_impl = "inproc" # or "zmq"
+ipc_impl = "zmq" # inproc or "zmq"
 cmd_bind = "tcp://127.0.0.1:7788"
 telem_bind = "tcp://127.0.0.1:7789"
 
 [coordinator]
 refresh_hz = 5.0
-ipc_impl = "inproc" # or "zmq"
+ipc_impl = "zmq" # inproc or "zmq"
 agents_cmd = { vm1 = "tcp://127.0.0.1:7788" }
 telem_subs = ["tcp://127.0.0.1:7789"]
