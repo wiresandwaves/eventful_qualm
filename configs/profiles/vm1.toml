@@ -8,5 +8,5 @@ telem_bind = "tcp://0.0.0.0:7789"
 [coordinator]
 refresh_hz = 5.0
 ipc_impl = "zmq"
-agents_cmd = { vm1 = "tcp://192.168.56.1:7788" }
-telem_subs = ["tcp://192.168.56.1:7789"]
+agents_cmd = { vm1 = "tcp://192.168.220.128:7788" }
+telem_subs = ["tcp://192.168.220.128:7789"]
