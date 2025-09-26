@@ -1,0 +1,56 @@
+# --- Python build/cache ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.eggs/
+.build/
+dist/
+*.egg-info/
+
+# --- Virtual envs ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Editors/OS noise ---
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- VS Code (keep settings if you want) ---
+.vscode/*
+# !.vscode/settings.json
+# !.vscode/launch.json
+# !.vscode/tasks.json
+
+# --- Project-specific (EQ, logs, temp) ---
+eqlog*.txt
+*.log
+logs/
+recordings/
+tmp/
+temp/
+*.tmp
+~$*
+*.spec
+
+# --- Config you consider private ---
+# If you want ROI file local-only, uncomment next line:
+config/eq_rois.json
+
+# Example: keep machine-local overrides out of git
+config/local.yaml
+
+# --- Model data / large artifacts ---
+*.onnx
+*.tflite
+*.pth
+*.pt
+*.pb
+
+site/

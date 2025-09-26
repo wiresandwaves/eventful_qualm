@@ -1,0 +1,41 @@
+site_name: Eventful Qualm
+site_description: Two-VM exercise in automation with clean, testable architecture.
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.tracking
+    - content.code.copy
+    - toc.follow
+
+plugins:
+  - search
+  - mermaid2
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - def_list
+  - footnotes
+  - tables
+  - pymdownx.details
+  - pymdownx.superfences:
+  - pymdownx.highlight
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji
+
+nav:
+  - Home: index.md
+  - Architecture Decision Records:
+      - ADR 0001 — Hexagonal Architecture: adr/0001-hexagonal-architecture.md
+      - ADR 0002 — IPC Messaging Choice: adr/0002-ipc-messaging.md
+      - ADR 0003 — Config Strategy: adr/0003-config-strategy.md
+      - ADR 0004 — Testing Strategy: adr/0004-testing-strategy.md
+      - ADR 0005 — IPC Wire Spec (ZeroMQ): adr/0005-ipc-wire-spec.md

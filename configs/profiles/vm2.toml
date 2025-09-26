@@ -1,0 +1,10 @@
+[agent]
+agent_id = "vm2"
+heartbeat_hz = 5.0
+cmd_bind = "tcp://0.0.0.0:8788"
+telem_bind = "tcp://0.0.0.0:8789"
+
+[coordinator]
+refresh_hz = 5.0
+agents_cmd = { vm2 = "tcp://192.168.56.2:8788" }
+telem_subs = ["tcp://192.168.56.2:8789"]

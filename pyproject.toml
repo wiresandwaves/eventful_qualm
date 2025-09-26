@@ -1,0 +1,108 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "eventful_qualm"
+version = "0.0.1"
+description = "Eventful Qualm — two-VM exercise in automation with clean, testable architecture."
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+license = { file = "LICENSE" }
+authors = [{ name = "wiresandwaves" }]
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.13",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: Microsoft :: Windows",
+  "Development Status :: 2 - Pre-Alpha",
+]
+
+dependencies = [
+  "pydantic>=2.7",   # or newer
+]
+
+[project.optional-dependencies]
+dev = [
+  # Formatting / lint / types
+  "black>=24.8.0",
+  "ruff>=0.6.9",
+  "mypy>=1.11.2",
+
+  # Testing
+  "pytest>=8.3.3",
+  "pytest-asyncio>=0.24.0",
+
+  # Git hooks
+  "pre-commit>=4.0.1",
+
+  # Typing helpers
+  "types-setuptools>=75.1.0.20240917",
+
+  # mkdocs
+  "mkdocs-material>=9.5"
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py313"]
+exclude = '''
+/(
+  \.git
+| \.venv
+| build
+| dist
+)/
+'''
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+extend-exclude = [".venv", "build", "dist"]
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "F",   # pyflakes
+  "I",   # isort
+  "B",   # flake8-bugbear
+  "UP",  # pyupgrade
+  "RET", # flake8-return
+  "W",   # pycodestyle warnings
+]
+ignore = [
+  "E203",  # handled by Black
+]
+
+[tool.ruff.format]
+quote-style = "preserve"
+
+[tool.mypy]
+python_version = "3.13"
+pretty = true
+show_error_codes = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+no_implicit_optional = true
+strict_equality = true
+disallow_any_generics = false
+disallow_subclassing_any = false
+check_untyped_defs = true
+explicit_package_bases = true
+mypy_path = ["libs"]
+files = ["libs", "apps"]
+
+# tighten to "strict = true" incrementally.
+strict = false
+
+# Make sure tests and adapters don't block progress early on.
+exclude = '(^\.venv/|^build/|^dist/)'
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["apps", "libs"]  # so hatch finds packages later
