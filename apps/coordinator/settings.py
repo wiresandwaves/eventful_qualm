@@ -1,11 +1,17 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class CoordinatorSettings(BaseModel):
-    refresh_hz: float = Field(default=5.0)
-    # REQ connects to these per agent_id
-    agents_cmd: dict[str, str] = Field(default_factory=lambda: {"vm1": "tcp://127.0.0.1:7788"})
-    # SUB connects to each of these
-    telem_subs: list[str] = Field(default_factory=lambda: ["tcp://127.0.0.1:7789"])
+class CoordinatorSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="EVQ_", extra="ignore")
+
+    refresh_hz: float = 5.0
+
+    # choose transport impl
+    ipc_impl: Literal["inproc", "zmq"] = "inproc"
+
+    agents_cmd: dict[str, str] = {}  # name -> REQ endpoint
+    telem_subs: list[str] = []  # list of SUB endpoints

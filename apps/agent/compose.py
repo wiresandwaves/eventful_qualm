@@ -1,45 +1,21 @@
-# apps/agent/compose.py
-from __future__ import annotations
-
-from adapters.dx_capture import FakeScreenCapturePort
-from adapters.telemetry import FakeTelemetryPort
-from adapters.time import FakeClockPort, FakeSleeperPort
-from adapters.win_input import FakeFocusPort, FakeHumanInputPort, FakeKeyboardMousePort
-from domain.agent import AgentService
+from ports.ipc import AgentCommandPort, TelemetryPubPort
 
 from apps.agent.settings import AgentSettings
 
 
-class AgentApp:
-    """Wires the domain service to fake adapters only."""
+def build_ipc(settings: AgentSettings) -> tuple[AgentCommandPort, TelemetryPubPort]:
+    cmd: AgentCommandPort
+    telem_pub: TelemetryPubPort
 
-    def __init__(self, settings: AgentSettings) -> None:
-        self.settings = settings
+    if settings.ipc_impl == "zmq":
+        from adapters.ipc_zmq.zmq import ZmqAgentCommandPort, ZmqTelemetryPubPort
 
-        # Fakes (no OS calls)
-        self.clock = FakeClockPort()
-        self.sleep = FakeSleeperPort()
-        self.telemetry = FakeTelemetryPort()
-        self.human = FakeHumanInputPort()
-        self.focus = FakeFocusPort()
-        self.kbm = FakeKeyboardMousePort()
-        self.capture = FakeScreenCapturePort(fps_value=30.0)
+        # Agent side: REP bind for commands; PUB bind for telemetry
+        cmd = ZmqAgentCommandPort.bind_rep(settings.cmd_bind)
+        telem_pub = ZmqTelemetryPubPort.bind_pub(settings.telem_bind)
+    else:
+        from adapters.ipc_inproc.inproc import InprocAgentCommandPort, InprocTelemetryPubPort
 
-        # Domain service
-        self.svc = AgentService(
-            clock=self.clock,
-            sleep=self.sleep,
-            telem=self.telemetry,
-            agent_id=self.settings.agent_id,
-            heartbeat_hz=self.settings.heartbeat_hz,
-        )
-
-        # Manual override: any human input flips HOLD
-        self.human.subscribe(lambda: self.svc.set_hold(True))
-
-    def heartbeat_once(self) -> None:
-        self.svc.tick()
-
-    @property
-    def period(self) -> float:
-        return self.svc.period
+        cmd = InprocAgentCommandPort.create()
+        telem_pub = InprocTelemetryPubPort.create()
+    return cmd, telem_pub

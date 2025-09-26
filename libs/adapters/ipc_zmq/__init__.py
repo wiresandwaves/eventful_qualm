@@ -1,3 +1,3 @@
-from .fakes import FakeAgentCommandPort, FakeTelemetrySubPort
+from .zmq import ZmqAgentCommandPort, ZmqTelemetryPubPort, ZmqTelemetrySubPort
 
-__all__ = ["FakeAgentCommandPort", "FakeTelemetrySubPort"]
+__all__ = ["ZmqAgentCommandPort", "ZmqTelemetryPubPort", "ZmqTelemetrySubPort"]
