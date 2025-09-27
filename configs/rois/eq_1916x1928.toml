@@ -1,0 +1,120 @@
+[meta]
+name = "EverQuest Window"
+width = 1916
+height = 1928
+coordinate_space = "client"
+units = "px"
+
+[rois]
+player_hp_percent = { x = 291, y = 1450, w = 35, h = 19 }
+player_mana_percent = { x = 608, y = 1452, w = 30, h = 15 }
+player_endurance_percent = { x = 290, y = 1476, w = 36, h = 23 }
+player_xp_percent = { x = 614, y = 1479, w = 24, h = 18 }
+target_name = { x = 1271, y = 1428, w = 256, h = 18 }
+target_hp_percent = { x = 1530, y = 1441, w = 34, h = 24 }
+target_of_target_name = { x = 1300, y = 1465, w = 227, h = 15 }
+target_of_target_hp_percent = { x = 1534, y = 1480, w = 28, h = 14 }
+target_buff_debuff_icons = { x = 1571, y = 1431, w = 326, h = 62 }
+combat_status_indicator = { x = 326, y = 1443, w = 28, h = 25 }
+compass = { x = 918, y = 8, w = 98, h = 23 }
+target_con_color = { x = 1270, y = 1426, w = 626, h = 3 }
+post_combat_timer = { x = 325, y = 1471, w = 32, h = 14 }
+player_current_hp = { x = 130, y = 1433, w = 29, h = 15 }
+player_max_hp = { x = 170, y = 1434, w = 27, h = 14 }
+player_current_mana = { x = 437, y = 1433, w = 30, h = 16 }
+player_max_mana = { x = 479, y = 1435, w = 27, h = 14 }
+spell_gem_0 = { x = 10, y = 1000, w = 136, h = 28 }
+spell_gem_1 = { x = 12, y = 1035, w = 132, h = 26 }
+spell_gem_2 = { x = 14, y = 1068, w = 130, h = 24 }
+spell_gem_3 = { x = 14, y = 1102, w = 132, h = 25 }
+spell_gem_4 = { x = 14, y = 1135, w = 130, h = 26 }
+spell_gem_5 = { x = 13, y = 1168, w = 132, h = 26 }
+spell_gem_6 = { x = 12, y = 1200, w = 133, h = 27 }
+spell_gem_7 = { x = 13, y = 1234, w = 131, h = 26 }
+cast_bar = { x = 645, y = 1430, w = 262, h = 21 }
+
+
+buff_0_icon = { x = 1760, y = 0, w = 28, h = 29 }
+buff_0_debuff_indicator = { x = 1788, y = 0, w = 22, h = 14 }
+buff_0_duration = { x = 1788, y = 16, w = 22, h = 13 }
+buff_0_name = { x = 1810, y = 0, w = 100, h = 29 }
+
+buff_1_icon = { x = 1760, y = 29,  w = 28, h = 29 }
+buff_1_debuff_indicator = { x = 1788, y = 29,  w = 22, h = 14 }
+buff_1_duration = { x = 1788, y = 45,  w = 22, h = 13 }
+buff_1_name = { x = 1810, y = 29,  w = 100, h = 29 }
+
+buff_2_icon = { x = 1760, y = 58,  w = 28, h = 29 }
+buff_2_debuff_indicator = { x = 1788, y = 58,  w = 22, h = 14 }
+buff_2_duration = { x = 1788, y = 74,  w = 22, h = 13 }
+buff_2_name = { x = 1810, y = 58,  w = 100, h = 29 }
+
+buff_3_icon = { x = 1760, y = 87,  w = 28, h = 29 }
+buff_3_debuff_indicator = { x = 1788, y = 87,  w = 22, h = 14 }
+buff_3_duration = { x = 1788, y = 103, w = 22, h = 13 }
+buff_3_name = { x = 1810, y = 87,  w = 100, h = 29 }
+
+buff_4_icon = { x = 1760, y = 116, w = 28, h = 29 }
+buff_4_debuff_indicator = { x = 1788, y = 116, w = 22, h = 14 }
+buff_4_duration = { x = 1788, y = 132, w = 22, h = 13 }
+buff_4_name = { x = 1810, y = 116, w = 100, h = 29 }
+
+buff_5_icon = { x = 1760, y = 145, w = 28, h = 29 }
+buff_5_debuff_indicator = { x = 1788, y = 145, w = 22, h = 14 }
+buff_5_duration = { x = 1788, y = 161, w = 22, h = 13 }
+buff_5_name = { x = 1810, y = 145, w = 100, h = 29 }
+
+buff_6_icon = { x = 1760, y = 174, w = 28, h = 29 }
+buff_6_debuff_indicator = { x = 1788, y = 174, w = 22, h = 14 }
+buff_6_duration = { x = 1788, y = 190, w = 22, h = 13 }
+buff_6_name = { x = 1810, y = 174, w = 100, h = 29 }
+
+buff_7_icon = { x = 1760, y = 203, w = 28, h = 29 }
+buff_7_debuff_indicator = { x = 1788, y = 203, w = 22, h = 14 }
+buff_7_duration = { x = 1788, y = 219, w = 22, h = 13 }
+buff_7_name = { x = 1810, y = 203, w = 100, h = 29 }
+
+buff_8_icon = { x = 1760, y = 232, w = 28, h = 29 }
+buff_8_debuff_indicator = { x = 1788, y = 232, w = 22, h = 14 }
+buff_8_duration = { x = 1788, y = 248, w = 22, h = 13 }
+buff_8_name = { x = 1810, y = 232, w = 100, h = 29 }
+
+buff_9_icon = { x = 1760, y = 261, w = 28, h = 29 }
+buff_9_debuff_indicator = { x = 1788, y = 261, w = 22, h = 14 }
+buff_9_duration = { x = 1788, y = 277, w = 22, h = 13 }
+buff_9_name = { x = 1810, y = 261, w = 100, h = 29 }
+
+buff_10_icon = { x = 1760, y = 290, w = 28, h = 29 }
+buff_10_debuff_indicator = { x = 1788, y = 290, w = 22, h = 14 }
+buff_10_duration = { x = 1788, y = 306, w = 22, h = 13 }
+buff_10_name = { x = 1810, y = 290, w = 100, h = 29 }
+
+buff_11_icon = { x = 1760, y = 319, w = 28, h = 29 }
+buff_11_debuff_indicator = { x = 1788, y = 319, w = 22, h = 14 }
+buff_11_duration = { x = 1788, y = 335, w = 22, h = 13 }
+buff_11_name = { x = 1810, y = 319, w = 100, h = 29 }
+
+buff_12_icon = { x = 1760, y = 348, w = 28, h = 29 }
+buff_12_debuff_indicator = { x = 1788, y = 348, w = 22, h = 14 }
+buff_12_duration = { x = 1788, y = 364, w = 22, h = 13 }
+buff_12_name = { x = 1810, y = 348, w = 100, h = 29 }
+
+buff_13_icon = { x = 1760, y = 377, w = 28, h = 29 }
+buff_13_debuff_indicator = { x = 1788, y = 377, w = 22, h = 14 }
+buff_13_duration = { x = 1788, y = 393, w = 22, h = 13 }
+buff_13_name = { x = 1810, y = 377, w = 100, h = 29 }
+
+buff_14_icon = { x = 1760, y = 406, w = 28, h = 29 }
+buff_14_debuff_indicator = { x = 1788, y = 406, w = 22, h = 14 }
+buff_14_duration = { x = 1788, y = 422, w = 22, h = 13 }
+buff_14_name = { x = 1810, y = 406, w = 100, h = 29 }
+
+buff_15_icon = { x = 1760, y = 435, w = 28, h = 29 }
+buff_15_debuff_indicator = { x = 1788, y = 435, w = 22, h = 14 }
+buff_15_duration = { x = 1788, y = 451, w = 22, h = 13 }
+buff_15_name = { x = 1810, y = 435, w = 100, h = 29 }
+
+buff_16_icon = { x = 1760, y = 464, w = 28, h = 29 }
+buff_16_debuff_indicator = { x = 1788, y = 464, w = 22, h = 14 }
+buff_16_duration = { x = 1788, y = 480, w = 22, h = 13 }
+buff_16_name = { x = 1810, y = 464, w = 100, h = 29 }

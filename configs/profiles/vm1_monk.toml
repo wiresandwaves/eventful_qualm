@@ -1,0 +1,16 @@
+# vm1_monk.toml
+[agent.capture]
+adapter = "mss"
+window_title = "EverQuest"   # match your EQ window title substring
+target_fps = 10.0
+roi_profile = "eq_1916x1928" # file in configs/rois without .toml
+
+# Optional: pin to a specific monitor instead of window_title
+# monitor = 1
+
+[agent.topics]
+include = ["heartbeat", "state", "fps"]
+
+# Future (examples):
+# [agent.ocr]
+# engine = "tesseract"

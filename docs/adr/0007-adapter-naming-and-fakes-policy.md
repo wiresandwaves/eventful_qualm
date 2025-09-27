@@ -1,8 +1,8 @@
 # ADR 0007 — Adapter Naming & Fakes Policy
 
-- **Status:** Proposed  
-- **Date:** 2025-09-26  
-- **Deciders:** Project Owner  
+- **Status:** Proposed
+- **Date:** 2025-09-26
+- **Deciders:** Project Owner
 - **Tags:** naming, testing, adapters
 
 ## Context

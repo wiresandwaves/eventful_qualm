@@ -1,0 +1,11 @@
+# vm2_shaman.toml
+[agent.capture]
+adapter = "mss"
+window_title = "EverQuest"   # match your EQ window title substring
+target_fps = 10.0
+roi_profile = "eq_1916x1928"
+
+# For an assist-bot behavior later, you can leave this as-is
+
+[agent.topics]
+include = ["heartbeat", "state", "fps"]

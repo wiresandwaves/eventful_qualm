@@ -1,8 +1,8 @@
 # ADR 0006 — Screen Capture Adapter (MSS first, DXGI later)
 
-- **Status:** Proposed  
-- **Date:** 2025-09-26  
-- **Deciders:** Project Owner  
+- **Status:** Proposed
+- **Date:** 2025-09-26
+- **Deciders:** Project Owner
 - **Tags:** capture, adapters, windows, performance
 
 ## Context
@@ -41,9 +41,9 @@ class CapturePort(Protocol):
 This aligns with the ports/adapters boundary from ADR-0001.
 
 ## Adapter(s)
-- **MSS (first)**: `libs/adapters/dx_capture/mss.py`  
+- **MSS (first)**: `libs/adapters/dx_capture/mss.py`
   Rationale: straightforward, minimal deps, works on Windows VMs; good for bring-up.
-- **DXCAM (later)**: `libs/adapters/dx_capture/dxcam.py`  
+- **DXCAM (later)**: `libs/adapters/dx_capture/dxcam.py`
   Rationale: lower latency & higher throughput when we need it.
 
 ## Agent wiring
