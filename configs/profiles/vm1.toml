@@ -10,3 +10,9 @@ refresh_hz = 5.0
 ipc_impl = "zmq"
 agents_cmd = { vm1 = "tcp://192.168.220.128:7788" }
 telem_subs = ["tcp://192.168.220.128:7789"]
+
+[agent.capture]
+adapter = "mss"
+monitor = 1
+target_fps = 10.0
+roi_profile = "eq_1916x1928"

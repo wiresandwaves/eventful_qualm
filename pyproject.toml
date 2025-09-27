@@ -40,6 +40,8 @@ dev = [
   "rich>=13.7",
 ]
 
+capture = ["mss>=9"]
+
 [tool.black]
 line-length = 100
 target-version = ["py313"]

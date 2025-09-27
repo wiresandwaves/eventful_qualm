@@ -12,3 +12,4 @@ class Telemetry(BaseModel):
     hp: int | None = None
     mana: int | None = None
     ts: float
+    fps: float | None = None

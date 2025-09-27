@@ -1,3 +1,3 @@
-from .fakes import FakeScreenCapturePort
+from .mss import MSSCapture
 
-__all__ = ["FakeScreenCapturePort"]
+__all__ = ["MSSCapture"]

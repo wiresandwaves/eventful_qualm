@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 import argparse
+import importlib
+import threading
 import time
-from typing import Any
+from typing import Any, Protocol, cast
 
 from shared.config.loader import load_agent_settings
 
 from apps.agent.compose import build_ipc
+
+
+class _HasCapture(Protocol):
+    def open(self) -> None: ...
+    def grab(self) -> object: ...
+    def fps(self) -> float: ...
+    def close(self) -> None: ...
 
 
 class _AgentState:
@@ -14,6 +23,24 @@ class _AgentState:
 
     def __init__(self) -> None:
         self.hold: bool = False
+
+
+def _make_capture(settings) -> _HasCapture | None:
+    try:
+        mod = importlib.import_module("adapters.dx_capture.mss")
+        MSSCaptureAny = cast(Any, mod.MSSCapture)
+    except Exception:
+        return None
+
+    cap = cast(
+        _HasCapture,
+        MSSCaptureAny(
+            monitor=getattr(settings.capture, "monitor", 1),
+            target_fps=getattr(settings.capture, "target_fps", 10.0),
+        ),
+    )
+    cap.open()
+    return cap
 
 
 def _make_dispatcher(telem_pub, agent_id: str, state: _AgentState):
@@ -39,13 +66,39 @@ def _make_dispatcher(telem_pub, agent_id: str, state: _AgentState):
             return {"ok": True, "agent_id": agent_id, "hold": True}
         if ctype == "RESUME":
             state.hold = False
-            _publish("state", {"state": "RUN", "hold": False})
+            _publish("state", {"state": "ASSIST", "hold": False})
             return {"ok": True, "agent_id": agent_id, "hold": False}
         # Unknown command
         _publish("event", {"note": "unknown_command", "type": ctype or "UNKNOWN"})
         return {"echo": ctype or "UNKNOWN", "agent_id": agent_id, "hold": state.hold}
 
     return handle
+
+
+def _start_capture_worker(settings) -> tuple[_HasCapture | None, threading.Thread | None]:
+    cap = _make_capture(settings)
+    if cap is None:
+        return None, None
+
+    stop_flag = {"stop": False}
+
+    def loop():
+        period = 1.0 / max(1e-6, getattr(settings.capture, "target_fps", 10.0))
+        while not stop_flag["stop"]:
+            try:
+                cap.grab()
+            except Exception:
+                time.sleep(0.1)
+            time.sleep(period * 0.5)
+
+    t = threading.Thread(target=loop, name="capture-worker", daemon=True)
+    t.start()
+
+    def _stop() -> None:
+        stop_flag["stop"] = True
+
+    t._evq_stop = _stop  # type: ignore[attr-defined]
+    return cap, t
 
 
 def main() -> int:
@@ -56,6 +109,9 @@ def main() -> int:
 
     settings = load_agent_settings()  # uses your loader/env/profile
     cmd_server, telem_pub = build_ipc(settings)
+    capture: _HasCapture | None
+    cap_thr: threading.Thread | None
+    capture, cap_thr = _start_capture_worker(settings)
 
     if not args.quiet:
         print(
@@ -84,9 +140,17 @@ def main() -> int:
             if now >= next_hb:
                 # periodic heartbeat
                 try:
-                    telem_pub.publish(
-                        "heartbeat", {"ok": True, "agent_id": settings.agent_id, "hold": state.hold}
-                    )
+                    payload = {
+                        "ok": True,
+                        "agent_id": settings.agent_id,
+                        "hold": state.hold,
+                    }
+                    if capture is not None:
+                        try:
+                            payload["fps"] = float(capture.fps())
+                        except Exception:
+                            pass
+                    telem_pub.publish("heartbeat", payload)
                 except Exception:
                     pass
                 next_hb = now + hb_period_s
@@ -98,6 +162,15 @@ def main() -> int:
     finally:
         try:
             cmd_server.close()
+        except Exception:
+            pass
+        try:
+            if cap_thr is not None and hasattr(cap_thr, "_evq_stop"):
+                stopper = cap_thr._evq_stop
+                if callable(stopper):
+                    stopper()
+            if capture is not None:
+                capture.close()
         except Exception:
             pass
     return 0

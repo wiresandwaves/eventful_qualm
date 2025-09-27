@@ -1,36 +1,26 @@
+# libs/ports/vision.py
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from typing import Any, NamedTuple
+from dataclasses import dataclass
+from typing import Protocol
+
+ROI = tuple[int, int, int, int]  # x, y, w, h  (compat alias)
 
 
-class ROI(NamedTuple):
-    x: int
-    y: int
-    w: int
-    h: int
+@dataclass(frozen=True)
+class Frame:
+    width: int
+    height: int
+    # raw BGRA bytes (row-major). Keep it tech-agnostic.
+    bgra: bytes
+
+    def size(self) -> tuple[int, int]:
+        return self.width, self.height
 
 
-class Frame(NamedTuple):
-    rgba: Any  # placeholder for an image buffer (e.g., ndarray)
-    ts: float
-
-
-class ScreenCapturePort(ABC):
-    @abstractmethod
-    def grab(self, roi: ROI | None = None) -> Frame: ...
-
-    @abstractmethod
+class CapturePort(Protocol):
+    def open(self, target: str | None = None) -> None: ...
+    def grab(self) -> Frame: ...
+    def grab_roi(self, roi: tuple[int, int, int, int]) -> Frame: ...  # x,y,w,h
     def fps(self) -> float: ...
-
-
-class OCRPort(ABC):
-    @abstractmethod
-    def read_text(self, image: Any, lang: str = "eng") -> str: ...
-
-
-class TemplateMatchPort(ABC):
-    @abstractmethod
-    def match(
-        self, image: Any, template: Any, threshold: float = 0.95
-    ) -> tuple[int, int] | None: ...
+    def close(self) -> None: ...

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+# mypy: ignore-errors
 window_roi_picker.py
 Live client-relative cursor coordinates & ROI picker for a chosen window.
 
@@ -186,8 +187,11 @@ def main() -> None:
         for i, (hwnd, title) in enumerate(wins, 1):
             rect = _client_rect(hwnd)
             if rect:
-                l, t, _r, _b, w, h = rect
-                print(f"[{i}] hwnd=0x{hwnd:08X}  title='{title}'  client=({w}x{h}) at ({l},{t})")
+                left, top, _right, _bottom, width, height = rect
+                print(
+                    f"[{i}] hwnd=0x{hwnd:08X}  title='{title}'  client=({width}x{height}) at "
+                    + f"({left},{top})"
+                )
             else:
                 print(f"[{i}] hwnd=0x{hwnd:08X}  title='{title}'  client=(?)")
         sys.exit(0)
@@ -258,7 +262,8 @@ def main() -> None:
     br: tuple[int, int] | None = None
 
     print(
-        "\nControls: '1' mark TL, '2' mark BR, 'n' name+save, 'f' full ROI, 'r' reload+print, 'q' quit.\n"
+        "\nControls: '1' mark TL, '2' mark BR, 'n' name+save, 'f' full ROI, 'r' reload+print, "
+        + "'q' quit.\n"
     )
     print("Live client-relative cursor coords will stream every ~100ms.\n")
 

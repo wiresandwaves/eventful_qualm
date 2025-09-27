@@ -1,4 +1,5 @@
 """
+# mypy: ignore-errors
 window_probe.py
 Find windows, print client rectangle (DPI-aware), and emit a ROI TOML template.
 Usage:

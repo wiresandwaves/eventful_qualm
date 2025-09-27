@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+# mypy: ignore-errors
 window_roi_ocr_check.py
 Capture a specific client window (or any), overlay ROIs from a TOML, and optionally OCR.
 
@@ -10,7 +11,8 @@ Features
 
 Usage examples:
   python window_roi_ocr_check.py --roi configs/rois/1916x1928.toml --title "Window" --list
-  python window_roi_ocr_check.py --roi configs/rois/1916x1928.toml --title "Window" --index 2 --out out1 --ocr
+  python window_roi_ocr_check.py --roi configs/rois/1916x1928.toml --title "Window" --index 2
+      --out out1 --ocr
   python window_roi_ocr_check.py --roi configs/rois/1916x1928.toml --active --out out1
 """
 
@@ -174,8 +176,11 @@ def main() -> None:
         for i, (hwnd, title) in enumerate(wins, 1):
             rect = _client_rect(hwnd)
             if rect:
-                l, t, _r, _b, w, h = rect
-                print(f"[{i}] hwnd=0x{hwnd:08X}  title='{title}'  client=({w}x{h}) at ({l},{t})")
+                left, top, _right, _bottom, width, height = rect
+                print(
+                    f"[{i}] hwnd=0x{hwnd:08X}  title='{title}'  client=({width}x{height}) at "
+                    + f"({left},{top})"
+                )
             else:
                 print(f"[{i}] hwnd=0x{hwnd:08X}  title='{title}'  client=(?)")
         sys.exit(0)
@@ -216,6 +221,9 @@ def main() -> None:
                 for i, (hw, tt) in enumerate(wins, 1):
                     print(f"  [{i}] hwnd=0x{hw:08X} title='{tt}'")
 
+    if target is None:
+        print("No target window selected.", file=sys.stderr)
+        sys.exit(2)
     rect = _client_rect(target)
     if not rect:
         print("Couldn't get client rect for target window.", file=sys.stderr)
@@ -267,7 +275,7 @@ def main() -> None:
         img.save(os.path.join(args.out, "screenshot.png"))
 
         boxed = img.copy()
-        draw = ImageDraw.Draw(boxed)  # type: ignore[arg-type]
+        draw = ImageDraw.Draw(boxed)
         for name, roi in rois.items():
             try:
                 rx, ry, rw, rh = _roi_to_rect(roi, meta_w, meta_h)
@@ -279,7 +287,7 @@ def main() -> None:
             crop_path = os.path.join(args.out, f"roi_{name}.png")
             crop.save(crop_path)
             if args.ocr:
-                text = pytesseract.image_to_string(crop)  # type: ignore[union-attr]
+                text = pytesseract.image_to_string(crop)
                 with open(os.path.join(args.out, f"roi_{name}.txt"), "w", encoding="utf-8") as f:
                     f.write(text.strip())
 
